@@ -369,18 +369,19 @@ def main():
 
             if tool:
                 if module.check_mode:
-                    changed = True
+                    extra_opts = '--test'
                 else:
-                    cmd = "%s -%s %s%s %s/%s %s" % (tool, size_opt, size, size_unit, vg, this_lv['name'], pvs)
-                    rc, out, err = module.run_command(cmd)
-                    if "Reached maximum COW size" in out:
-                        module.fail_json(msg="Unable to resize %s to %s%s" % (lv, size, size_unit), rc=rc, err=err, out=out)
-                    elif rc == 0:
-                        changed = True
-                    elif "matches existing size" in err:
-                        module.exit_json(changed=False, vg=vg, lv=this_lv['name'], size=this_lv['size'])
-                    else:
-                        module.fail_json(msg="Unable to resize %s to %s%s" % (lv, size, size_unit), rc=rc, err=err)
+                    extra_opts = ''
+                cmd = "%s %s -%s %s%s %s/%s %s" % (tool, extra_opts, size_opt, size, size_unit, vg, this_lv['name'], pvs)
+                rc, out, err = module.run_command(cmd)
+                if "Reached maximum COW size" in out:
+                    module.fail_json(msg="Unable to resize %s to %s%s" % (lv, size, size_unit), rc=rc, err=err, out=out)
+                elif rc == 0:
+                    changed = True
+                elif "matches existing size" in err:
+                    module.exit_json(changed=False, vg=vg, lv=this_lv['name'], size=this_lv['size'])
+                else:
+                    module.fail_json(msg="Unable to resize %s to %s%s" % (lv, size, size_unit), rc=rc, err=err)
 
     module.exit_json(changed=changed, msg=msg)
 
