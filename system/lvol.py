@@ -380,6 +380,8 @@ def main():
                     changed = True
                 elif "matches existing size" in err:
                     module.exit_json(changed=False, vg=vg, lv=this_lv['name'], size=this_lv['size'])
+                elif "not larger than existing size" in err:
+                    module.exit_json(changed=False, vg=vg, lv=this_lv['name'], size=this_lv['size'], msg="Original size is larger than requested size", err=err)
                 else:
                     module.fail_json(msg="Unable to resize %s to %s%s" % (lv, size, size_unit), rc=rc, err=err)
 
