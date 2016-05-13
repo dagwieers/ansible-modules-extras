@@ -30,6 +30,7 @@ options:
       - Target path (expression).
     required: true
     default: null
+    aliases: ['path']
   ftype:
     description:
       - File type.
@@ -45,11 +46,12 @@ options:
       - SELinux user for the specified target.
     required: false
     default: null
-  serange:
+  selevel:
     description:
       - SELinux range for the specified target.
     required: false
     default: null
+    aliases: ['serange']
   state:
     description:
       - Desired boolean value.
@@ -194,7 +196,7 @@ def main():
                 ftype   = dict(required=False, choices=option_to_file_type_str.keys(), default='a'),
                 setype  = dict(required=True),
                 seuser  = dict(required=False, default=None),
-                serange = dict(required=False, default=None),
+                selevel = dict(required=False, default=None, aliases=['serange']),
                 state   = dict(required=False, choices=['present', 'absent'], default='present'),
                 reload  = dict(required=False, type='bool', default='yes'),
             ),
@@ -213,7 +215,7 @@ def main():
     ftype = module.params['ftype']
     setype = module.params['setype']
     seuser = module.params['seuser']
-    serange = module.params['serange']
+    serange = module.params['selevel']
     state = module.params['state']
     do_reload = module.params['reload']
 
