@@ -97,7 +97,7 @@ option_to_file_type_str = {
 }
 
 def semanage_fcontext_exists(sefcontext, target, ftype):
-    """ Get the SELinux file context mapping definition from policy. Return None if it does not exist """
+    ''' Get the SELinux file context mapping definition from policy. Return None if it does not exist. '''
     record = (target, ftype)
     records = sefcontext.get_all()
     try:
@@ -106,19 +106,38 @@ def semanage_fcontext_exists(sefcontext, target, ftype):
         return None
 
 def semanage_fcontext_modify(module, result, target, ftype, setype, do_reload, serange, seuser, sestore=''):
-    """ Add or modify SELinux file context mapping definition to the policy. """
+    ''' Add or modify SELinux file context mapping definition to the policy. '''
 
+    changed = False
     prepared_diff = ''
 
     try:
         sefcontext = seobject.fcontextRecords(sestore)
         sefcontext.set_reload(do_reload)
-        changed = False
         exists = semanage_fcontext_exists(sefcontext, target, ftype)
-        if not exists:
-            if not seuser:
+        if exists:
+            # Modify existing entry
+            orig_seuser, orig_serole, orig_setype, orig_serange = exists
+
+            if seuser is None:
+                seuser = orig_seuser
+            if serange is None:
+                serange = orig_serange
+
+            if setype != orig_setype or seuser != orig_seuser or serange != orig_serange:
+                if not module.check_mode:
+                    sefcontext.modify(target, setype, ftype, serange, seuser)
+                changed = True
+
+                if module._diff:
+                    prepared_diff += '# Change to semanage file context mappings\n'
+                    prepared_diff += '-%s      %s      %s:%s:%s:%s\n' % (target, ftype, orig_seuser, orig_serole, orig_setype, orig_serange)
+                    prepared_diff += '+%s      %s      %s:%s:%s:%s\n' % (target, ftype, seuser, orig_serole, setype, serange)
+        else:
+            # Add missing entry
+            if seuser is None:
                 seuser = 'system_u'
-            if not serange:
+            if serange is None:
                 serange = 's0'
 
             if not module.check_mode:
@@ -126,54 +145,46 @@ def semanage_fcontext_modify(module, result, target, ftype, setype, do_reload, s
             changed = True
 
             if module._diff:
+                prepared_diff += '# Addition to semanage file context mappings\n'
                 prepared_diff += '+%s      %s      %s:%s:%s:%s\n' % (target, ftype, seuser, 'object_r', setype, serange)
-        else:
-            if not seuser:
-                seuser = exists[0]
-            if not serange:
-                serange = exists[3]
-
-            if exists[2] != setype or seuser != exists[0] or serange != exists[3]:
-                if not module.check_mode:
-                    sefcontext.modify(target, setype, ftype, serange, seuser)
-                changed = True
-
-                if module._diff:
-                    prepared_diff += '-%s    %s    %s:%s:%s:%s\n' % (target, ftype, exists[0], exists[1], exists[2], exists[3])
-                    prepared_diff += '+%s    %s    %s:%s:%s:%s\n' % (target, ftype, seuser, exists[1], setype, serange)
 
     except Exception, e:
         module.fail_json(msg="%s: %s\n" % (e.__class__.__name__, str(e)))
 
     if module._diff and prepared_diff:
-        module.exit_json(changed=changed, seuser=seuser, serange=serange, diff=dict(prepared=prepared_diff), **result)
-    else:
-        module.exit_json(changed=changed, seuser=seuser, serange=serange, **result)
+        result['diff'] = dict(prepared=prepared_diff)
+
+    module.exit_json(changed=changed, seuser=seuser, serange=serange, **result)
 
 def semanage_fcontext_delete(module, result, target, ftype, do_reload, sestore=''):
-    """ Delete SELinux file context mapping definition from the policy. """
+    ''' Delete SELinux file context mapping definition from the policy. '''
 
+    changed = False
     prepared_diff = ''
 
     try:
         sefcontext = seobject.fcontextRecords(sestore)
         sefcontext.set_reload(do_reload)
-        changed = False
         exists = semanage_fcontext_exists(sefcontext, target, ftype)
-        if exists and not module.check_mode:
-            sefcontext.delete(target, ftype)
+        if exists:
+            # Remove existing entry
+            orig_seuser, orig_serole, orig_setype, orig_serange = exists
+
+            if not module.check_mode:
+                sefcontext.delete(target, ftype)
             changed = True
 
             if module._diff:
+                prepared_diff += '# Deletion to semanage file context mappings\n'
                 prepared_diff += '-%s      %s      %s:%s:%s:%s\n' % (target, ftype, exists[0], exists[1], exists[2], exists[3])
 
     except Exception, e:
         module.fail_json(msg="%s: %s\n" % (e.__class__.__name__, str(e)))
 
     if module._diff and prepared_diff:
-        module.exit_json(changed=changed, diff=dict(prepared=prepared_diff), **result)
-    else:
-        module.exit_json(changed=changed, **result)
+        result['diff'] = dict(prepared=prepared_diff)
+
+    module.exit_json(changed=changed, **result)
 
 
 def main():
