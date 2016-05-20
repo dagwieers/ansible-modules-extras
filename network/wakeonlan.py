@@ -31,21 +31,29 @@ options:
       - MAC address to send wake-on-lan broadcast packet for
     required: true
     default: null
+  broadcast:
+    description:
+      - Network broadcast address to use for broadcasting
+    required: false
+    default: 255.255.255.255
 author: "Dag Wieers (@dagwieers)"
 todo:
   - Add arping support to check whether the system is up (before and after)
   - Enable check-mode support (when we have arping support)
+  - Does not have SecureOn password support
 notes:
   - This module sends a magic packet, without knowing whether it worked
+  - Only works if the target system was properly configured for Wake-On-Lan !
 '''
 
 EXAMPLES = '''
 # Send a magic wake-on-lan packet to 00:CA:FE:BA:BE:00
-- local_action: wake-on-lan mac=00:CA:FE:BA:BE:00
+- local_action: wakeonlan mac=00:CA:FE:BA:BE:00 broadcast=192.168.1.255
+
+- wakeonlan: mac=00:CA:FE:BA:BE:00 broadcast=192.168.1.255
+  delegate_to: localhost
 '''
 
-import sys
-import os
 import socket
 import struct
 
