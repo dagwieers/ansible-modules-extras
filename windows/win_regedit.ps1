@@ -155,7 +155,7 @@ if($state -eq "present") {
                 }
             }
             # Changes Only Data
-            elseif (-Not (Compare-RegistryData -ReferenceData $currentRegistryData -DifferenceData $registryData))
+            elseif ($currentRegistryData -ne $registryData)
             {
                 Try {
                     Set-ItemProperty -Path $registryKey -Name $registryValue -Value $registryData
