@@ -22,9 +22,9 @@ DOCUMENTATION = '''
 ---
 module: wakeonlan
 version_added: 2.2
-short_description: Send magic wake-on-lan broadcast packet
+short_description: Send magic Wake-on-LAN (WoL) broadcast packet
 description:
-   - The M(wakeonlan) module sends magic wake-on-lan broadcast packets.
+   - The M(wakeonlan) module sends magic Wake-on-LAN (WoL) broadcast packets.
 options:
   mac:
     description:
@@ -36,6 +36,11 @@ options:
       - Network broadcast address to use for broadcasting
     required: false
     default: 255.255.255.255
+  port:
+    description:
+      - UDP port to use for magic packet
+    required: false
+    default: 7
 author: "Dag Wieers (@dagwieers)"
 todo:
   - Add arping support to check whether the system is up (before and after)
@@ -43,21 +48,22 @@ todo:
   - Does not have SecureOn password support
 notes:
   - This module sends a magic packet, without knowing whether it worked
-  - Only works if the target system was properly configured for Wake-On-Lan !
+  - Only works if the target system was properly configured for Wake-on-LAN (in the BIOS and/or the OS)
+  - Some BIOSes have a different (configurable) Wake-on-LAN boot order (i.e. PXE first) when turned off
 '''
 
 EXAMPLES = '''
 # Send a magic wake-on-lan packet to 00:CA:FE:BA:BE:00
 - local_action: wakeonlan mac=00:CA:FE:BA:BE:00 broadcast=192.168.1.255
 
-- wakeonlan: mac=00:CA:FE:BA:BE:00 broadcast=192.168.1.255
+- wakeonlan: mac=00:CA:FE:BA:BE:00 port=9
   delegate_to: localhost
 '''
 
 import socket
 import struct
 
-def wakeonlan(macaddress, broadcast):
+def wakeonlan(macaddress, broadcast, port):
     """ Send a magic wake-on-lan packet. """
 
     mac = macaddress
@@ -81,20 +87,22 @@ def wakeonlan(macaddress, broadcast):
     # Broadcast payload to network
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    sock.sendto(data, (broadcast, 7))
+    sock.sendto(data, (broadcast, port))
 
 def main():
     module = AnsibleModule(
         argument_spec = dict(
             mac = dict(required=True, type='str'),
             broadcast = dict(required=False, default='255.255.255.255'),
+            port = dict(required=False, type='int', default=7),
         ),
     )
 
     mac = module.params.get('mac')
     broadcast = module.params.get('broadcast')
+    port = module.params.get('port')
 
-    wakeonlan(mac, broadcast)
+    wakeonlan(mac, broadcast, port)
 
     module.exit_json(changed=True)
 
