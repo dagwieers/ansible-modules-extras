@@ -60,23 +60,34 @@ EXAMPLES = '''
   delegate_to: localhost
 '''
 
+RETURN='''
+# Default return values
+'''
+
+from ansible.module_utils.basic import AnsibleModule
 import socket
 import struct
 
-def wakeonlan(macaddress, broadcast, port):
+
+def wakeonlan(module):
     """ Send a magic wake-on-lan packet. """
 
-    mac = macaddress
+    mac = module.params.get('mac')
+    broadcast = module.params.get('broadcast')
+    port = module.params.get('port')
 
     # Remove possible seperator from MAC address
     if len(mac) == 12 + 5:
         mac = mac.replace(mac[2], '')
 
+    if len(mac) != 12:
+        module.fail_json(msg="Incorrect MAC address length: %s" % module.params.get('mac'))
+
     # If we don't end up with 12 hexadecimal characters, fail
     try:
         int(mac, 16)
     except ValueError:
-        raise ValueError('Incorrect MAC address format %s' % macaddress)
+        module.fail_json(msg="Incorrect MAC address format: %s" % module.params.get('mac'))
  
     # Create payload for magic packet
     data = ''
@@ -87,7 +98,11 @@ def wakeonlan(macaddress, broadcast, port):
     # Broadcast payload to network
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    sock.sendto(data, (broadcast, port))
+    try:
+        sock.sendto(data, (broadcast, port))
+    except socket.error, e:
+        module.fail_json(msg=str(e))
+
 
 def main():
     module = AnsibleModule(
@@ -98,16 +113,9 @@ def main():
         ),
     )
 
-    mac = module.params.get('mac')
-    broadcast = module.params.get('broadcast')
-    port = module.params.get('port')
-
-    wakeonlan(mac, broadcast, port)
-
+    wakeonlan(module)
     module.exit_json(changed=True)
 
 
-# import module snippets
-from ansible.module_utils.basic import *
-
-main()
+if __name__ == '__main__':
+    main()
