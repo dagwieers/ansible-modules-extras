@@ -65,6 +65,7 @@ RETURN='''
 '''
 
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.pycompat24 import get_exception
 import socket
 import struct
 
@@ -100,7 +101,8 @@ def wakeonlan(module):
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     try:
         sock.sendto(data, (broadcast, port))
-    except socket.error, e:
+    except socket.error:
+        e = get_exception()
         module.fail_json(msg=str(e))
 
 
