@@ -22,23 +22,23 @@ DOCUMENTATION = '''
 ---
 module: wakeonlan
 version_added: 2.2
-short_description: Send magic Wake-on-LAN (WoL) broadcast packet
+short_description: Send a magic Wake-on-LAN (WoL) broadcast packet
 description:
    - The M(wakeonlan) module sends magic Wake-on-LAN (WoL) broadcast packets.
 options:
   mac:
     description:
-      - MAC address to send wake-on-lan broadcast packet for
+      - MAC address to send Wake-on-LAN broadcast packet for
     required: true
     default: null
   broadcast:
     description:
-      - Network broadcast address to use for broadcasting
+      - Network broadcast address to use for broadcasting magic Wake-on-LAN packet
     required: false
     default: 255.255.255.255
   port:
     description:
-      - UDP port to use for magic packet
+      - UDP port to use for magic Wake-on-LAN packet
     required: false
     default: 7
 author: "Dag Wieers (@dagwieers)"
@@ -53,7 +53,7 @@ notes:
 '''
 
 EXAMPLES = '''
-# Send a magic wake-on-lan packet to 00:CA:FE:BA:BE:00
+# Send a magic Wake-on-LAN packet to 00:CA:FE:BA:BE:00
 - local_action: wakeonlan mac=00:CA:FE:BA:BE:00 broadcast=192.168.1.255
 
 - wakeonlan: mac=00:CA:FE:BA:BE:00 port=9
@@ -70,25 +70,24 @@ import socket
 import struct
 
 
-def wakeonlan(module):
-    """ Send a magic wake-on-lan packet. """
+def wakeonlan(module, mac, broadcast, port):
+    """ Send a magic Wake-on-LAN packet. """
 
-    mac = module.params.get('mac')
-    broadcast = module.params.get('broadcast')
-    port = module.params.get('port')
+    mac_orig = mac
 
     # Remove possible seperator from MAC address
     if len(mac) == 12 + 5:
         mac = mac.replace(mac[2], '')
 
-    if len(mac) != 12:
-        module.fail_json(msg="Incorrect MAC address length: %s" % module.params.get('mac'))
-
     # If we don't end up with 12 hexadecimal characters, fail
+    if len(mac) != 12:
+        module.fail_json(msg="Incorrect MAC address length: %s" % mac_orig)
+
+    # Test if it converts to an integer, otherwise fail
     try:
         int(mac, 16)
     except ValueError:
-        module.fail_json(msg="Incorrect MAC address format: %s" % module.params.get('mac'))
+        module.fail_json(msg="Incorrect MAC address format: %s" % mac_orig)
  
     # Create payload for magic packet
     data = ''
@@ -115,7 +114,11 @@ def main():
         ),
     )
 
-    wakeonlan(module)
+    mac = module.params.get('mac')
+    broadcast = module.params.get('broadcast')
+    port = module.params.get('port')
+
+    wakeonlan(module, mac, broadcast, port)
     module.exit_json(changed=True)
 
 
