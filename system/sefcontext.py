@@ -23,6 +23,7 @@ module: sefcontext
 short_description: Manages SELinux file context mapping definitions
 description:
      - Manages SELinux file context mapping definitions
+     - Similar to the C(semanage fcontext) command
 version_added: "2.2"
 options:
   target:
