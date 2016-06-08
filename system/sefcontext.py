@@ -75,6 +75,13 @@ EXAMPLES = '''
 - sefcontext: target='/srv/git_repos(/.*)?' setype=httpd_git_rw_content_t state=present
 '''
 
+RETURN = '''
+# Default return values
+'''
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.pycompat24 import get_exception
+
 try:
     import selinux
     HAVE_SELINUX=True
@@ -151,7 +158,8 @@ def semanage_fcontext_modify(module, result, target, ftype, setype, do_reload, s
                 prepared_diff += '# Addition to semanage file context mappings\n'
                 prepared_diff += '+%s      %s      %s:%s:%s:%s\n' % (target, ftype, seuser, 'object_r', setype, serange)
 
-    except Exception, e:
+    except Exception:
+        e = get_exception()
         module.fail_json(msg="%s: %s\n" % (e.__class__.__name__, str(e)))
 
     if module._diff and prepared_diff:
@@ -181,7 +189,8 @@ def semanage_fcontext_delete(module, result, target, ftype, do_reload, sestore='
                 prepared_diff += '# Deletion to semanage file context mappings\n'
                 prepared_diff += '-%s      %s      %s:%s:%s:%s\n' % (target, ftype, exists[0], exists[1], exists[2], exists[3])
 
-    except Exception, e:
+    except Exception:
+        e = get_exception()
         module.fail_json(msg="%s: %s\n" % (e.__class__.__name__, str(e)))
 
     if module._diff and prepared_diff:
@@ -233,6 +242,5 @@ def main():
         module.fail_json(msg='Invalid value of argument "state": {0}'.format(state))
 
 
-from ansible.module_utils.basic import *
 if __name__ == '__main__':
     main()
